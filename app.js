@@ -181,7 +181,7 @@ function openModal(id) {
   else if (st === "restricted")
     statusBlock = `<div class="restrict-box">
       <h4>${icon("ban")} Why this stays view-only</h4><p>${el.context}</p>
-      <p class="mut">No preview is offered — this studio doesn't imitate sounds whose custodians have asked for them not to be taken.</p>
+      <p class="mut">This studio doesn't imitate sounds whose custodians have asked for them not to be taken. Therefore we do not provide preview.</p>
     </div>`;
   else if (st === "unlocked")
     statusBlock = `<div class="learn-box unlocked-box"><h4>${icon("check")} Unlocked by learning</h4><p>${el.context}</p></div>`;
@@ -229,7 +229,7 @@ function toggleElement(id) {
 function renderComp() {
   const box = $("#comp");
   if (!state.selected.length) {
-    box.innerHTML = `<p class="empty">Nothing here yet. Click an element to hear it and learn its story, then add it — or describe what you want to the assistant.</p>`;
+    box.innerHTML = `<p class="empty">Nothing here yet. Click an element to hear it then add it, or describe what you want to the assistant.</p>`;
     return;
   }
   box.innerHTML = "";
@@ -249,14 +249,14 @@ function computeFlags() {
   const els = state.selected.map(byId), flags = [];
   const trads = [...new Set(els.map((e) => e.tradition))];
   if (trads.length >= 3 && state.blend < 0.4)
-    flags.push({ level: "warn", text: `You're combining ${trads.length} traditions (${trads.join(", ")}) while set close to “single tradition”. That's how distinct musics get flattened into one vague flavor. Either narrow your palette, or move the blend slider to own this as a deliberate, credited fusion.` });
+    flags.push({ level: "warn", text: `You're combining ${trads.length} traditions (${trads.join(", ")}) while set close to “single tradition”. Please be warned that in this case, distinct musics could get flattened into one vague flavor. We suggest either narrow your palette or move the blend slider to own this as a deliberate fusion.` });
   const modal = els.filter((e) => e.type === "Scale");
   if (modal.length >= 2)
-    flags.push({ level: "warn", text: `${modal.map((m) => m.name).join(" and ")} are separate modal systems, each with its own grammar. Averaged together they risk becoming a generic “eastern-ish” sound that belongs to no one. If you blend them, keep their phrases distinct — the liner notes will credit each by name.` });
+    flags.push({ level: "warn", text: `${modal.map((m) => m.name).join(" and ")} are separate modal systems with independent grammar. Please be warned that averaging them together could risk becoming a generic music that belonged to no culture.` });
   if (els.length && trads.length >= 2 && state.fidelity > 0.6)
-    flags.push({ level: "info", text: `You're leaning toward reinterpretation across ${trads.length} traditions. Your export will describe this piece as “inspired by” its sources rather than a reproduction — the credits travel with it either way.` });
+    flags.push({ level: "info", text: `You're leaning toward reinterpretation across ${trads.length} traditions. Please be informed that our export will describe this piece as inspired by its list of sources.` });
   if (els.some((e) => statusOf(e) === "unlocked"))
-    flags.push({ level: "good", text: `You unlocked ${els.filter((e) => statusOf(e) === "unlocked").length} element(s) by reading their cultural context first — that context ships in your liner notes.` });
+    flags.push({ level: "good", text: `You unlocked ${els.filter((e) => statusOf(e) === "unlocked").length} element(s).` });
   return flags;
 }
 function renderFlags() {
@@ -277,8 +277,8 @@ function scoreElement(el, selectedEls) {
   if (promptShared.length) { score += promptShared.length * 2; reasons.push(`matches your ask for something ${promptShared.join(", ")}`); }
   const sameTrad = selectedEls.some((e) => e.tradition === el.tradition || e.region === el.region);
   if (selectedEls.length) {
-    if (sameTrad) { score += (1 - state.blend) * 2; if (state.blend < 0.5) reasons.push(`stays within the ${el.tradition} tradition, matching your “single tradition” setting`); }
-    else { score += state.blend * 1.6; if (state.blend >= 0.5) reasons.push(`brings in a different tradition, matching your “blended” setting`); }
+    if (sameTrad) { score += (1 - state.blend) * 2; if (state.blend < 0.5) reasons.push(`stays within the ${el.tradition} tradition. This matches your “single tradition” setting`); }
+    else { score += state.blend * 1.6; if (state.blend >= 0.5) reasons.push(`brings in a different tradition. This matches your “blended” setting`); }
   }
   score += 1 - Math.abs(state.fidelity - el.flex);
   if (statusOf(el) === "learn-first") score -= 0.3;
@@ -288,7 +288,7 @@ function renderSuggestions() {
   const box = $("#suggest");
   const selectedEls = state.selected.map(byId);
   if (!selectedEls.length && !state.promptTags.length) {
-    box.innerHTML = `<p class="empty">Suggestions appear here once you add an element or send a prompt — always with the reasoning, origin and source shown.</p>`;
+    box.innerHTML = `<p class="empty">Suggestions appear here once you add an element or send a prompt.</p>`;
     return;
   }
   const ranked = ELEMENTS.map((e) => scoreElement(e, selectedEls)).filter(Boolean)
@@ -297,7 +297,7 @@ function renderSuggestions() {
     const locked = statusOf(el) === "learn-first";
     return `<div class="sug" data-id="${el.id}">
       <div class="sug-head"><strong>${el.name}</strong><span class="trad">${el.tradition}</span></div>
-      <p class="why"><em>Why:</em> ${reasons.length ? reasons.join("; ") : "a versatile fit for your current settings"}.</p>
+      <p class="why"><em>Why:</em> ${reasons.length ? reasons.join("; ") : "a good fit for your current settings"}.</p>
       <p class="src">${icon("globe")} ${el.region} · ${el.source}</p>
       <div class="sug-actions">
         <button class="btn btn-sm" data-act="info">Details</button>
@@ -329,18 +329,18 @@ function handlePrompt(text) {
     if (p.re.test(text)) { addMsg("ai", `<p>${p.reply}</p>`); return; }
   const tags = [...new Set(KEYWORD_TAGS.filter(([re]) => re.test(text)).map(([, t]) => t))];
   if (!tags.length) {
-    addMsg("ai", `<p>I don't want to guess and get a culture wrong. Tell me the <strong>feeling</strong> (calm, festive, longing…) or the <strong>occasion</strong> (a celebration, an evening piece, something for studying) and I'll suggest specific elements with their sources.</p>`);
+    addMsg("ai", `<p>Tell us the <strong>feeling</strong> (calm, festive, longing…) or the <strong>occasion</strong> (a celebration, an evening piece, something for studying) and we will suggest specific elements.</p>`);
     return;
   }
   state.promptTags = tags;
   const matches = ELEMENTS.map((e) => scoreElement(e, state.selected.map(byId))).filter(Boolean)
     .sort((a, b) => b.score - a.score).slice(0, 3).filter((r) => r.score > 0);
-  if (!matches.length) { addMsg("ai", `<p>Nothing in the current library fits that closely — try another feeling, or browse the grid.</p>`); return; }
+  if (!matches.length) { addMsg("ai", `<p>Nothing in the current library fits that closely. Please try another feeling, or browse the grid.</p>`); return; }
   const items = matches.map(({ el }) => {
     const locked = statusOf(el) === "learn-first";
-    return `<li><strong>${el.name}</strong> (${el.tradition}) — ${el.meaning.split(". ")[0].replace(/\.$/, "")}. <span class="src">Source: ${el.source}.</span>${locked ? ` <span class="locknote">${icon("book")} Learn-first — open it to read its context and unlock.</span>` : ""}</li>`;
+    return `<li><strong>${el.name}</strong> (${el.tradition}) — ${el.meaning.split(". ")[0].replace(/\.$/, "")}. <span class="src">Source: ${el.source}.</span>${locked ? ` <span class="locknote">${icon("book")} Learn-first. Please open it to read its context and unlock.</span>` : ""}</li>`;
   }).join("");
-  addMsg("ai", `<p>For something <strong>${tags.join(", ")}</strong>, here's what fits and why:</p><ul>${items}</ul><p class="mut">These are also ranked in “Suggested next” — every pick shows its origin, meaning and source, so nothing enters your piece untraceably.</p>`);
+  addMsg("ai", `<p>For something <strong>${tags.join(", ")}</strong>, here's what fits and why:</p><ul>${items}</ul><p class="mut">These are also ranked in “Suggested next”.</p>`);
   renderSuggestions();
   matches.forEach(({ el }) => {
     const card = document.querySelector(`.card[data-id="${el.id}"]`);
@@ -374,8 +374,8 @@ function linerNotes() {
     flags.forEach((f) => lines.push(`- ${f.text}`));
     lines.push("");
   }
-  lines.push("This piece draws on the living traditions credited above. If you share the music, share these notes with it — credit is part of the composition.",
-    "", "Made with Cultural Sound Studio — a prototype for transparent, culturally respectful AI-assisted creation.");
+  lines.push("This piece draws on the living traditions credited above. If you share the music, share these notes with it, since credit is part of the composition.",
+    "", "Made with Cultural Sound Studio, a prototype for transparent, culturally respectful AI-assisted creation.");
   return { title, text: lines.join("\n") };
 }
 function exportNotes() {
@@ -385,7 +385,7 @@ function exportNotes() {
   wrap.innerHTML = `<div class="modal-card wide" role="dialog" aria-modal="true">
     <button class="modal-x" id="m-close" aria-label="Close">✕</button>
     <h2>${icon("notes")} Liner notes</h2>
-    <p class="mut">Every export credits its sources — like liner notes on an album.</p>
+    <p class="mut">Every export credits its sources.</p>
     <pre class="liner">${text.replace(/</g, "&lt;")}</pre>
     <div class="modal-actions"><button class="btn btn-gold" id="m-dl">${icon("download")} Download .txt</button></div>
   </div>`;
@@ -401,7 +401,7 @@ function exportNotes() {
 }
 function renderFlagsMsg() {
   const box = $("#flags");
-  box.innerHTML = `<div class="flag f-warn">${icon("warn")}<p>Add at least one element before exporting — liner notes credit what you actually used.</p></div>`;
+  box.innerHTML = `<div class="flag f-warn">${icon("warn")}<p>Please add at least one element before exporting.</p></div>`;
 }
 
 /* ---------------- Wiring ---------------- */
@@ -439,5 +439,5 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".try button").forEach((b) => (b.onclick = () => handlePrompt(b.textContent.trim())));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
-  addMsg("ai", `<p>Welcome to the studio. Browse the library to hear real rhythms, scales and instruments — each card shows <strong>where it's from, what it means, and the source</strong>. Some elements ask you to learn their context first; two are view-only out of respect. Describe what you want below, or just start clicking.</p>`);
+  addMsg("ai", `<p>Welcome to the Cultural Sound Studio. Browse the library to hear real rhythms, scales and instruments. Each card shows <strong>where it's from, what it means, and the source</strong>. Describe what you want below, or just start clicking.</p>`);
 });
