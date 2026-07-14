@@ -32,7 +32,6 @@
   </svg>
   <div class="brand">
     <h1>Cultural Sound Studio</h1>
-    <p>Create with cultures, not from them.</p>
   </div>
   <div class="spacer"></div>
   <span class="proto-badge">YYGS Capstone Prototype</span>
@@ -52,11 +51,11 @@
         <button data-f="Song">Songs</button>
       </div>
     </div>
-    <p class="panel-sub">Real rhythms, scales and instruments — click one to hear it and see where it comes from.</p>
+    <p class="panel-sub">Click one to hear it and see where it comes from.</p>
     <div class="legend">
       <span><i class="dot open"></i> Open to use</span>
-      <span><i class="dot learn"></i> Learn first, then unlock</span>
-      <span><i class="dot restrict"></i> Restricted — view only</span>
+      <span><i class="dot learn"></i> Require learning</span>
+      <span><i class="dot restrict"></i> View only</span>
     </div>
     <div id="grid" class="grid"></div>
   </section>
@@ -76,12 +75,12 @@
       <div class="slider">
         <label><span>Reproduce</span><span>Reinterpret</span></label>
         <input type="range" id="s-fidelity" min="0" max="100" value="35" />
-        <p class="hint">How closely you stay with a tradition versus remixing it — this reorders what gets suggested next.</p>
+        <p class="hint">This index refers to how closely you stay with a tradition VS. remixing it.</p>
       </div>
       <div class="slider">
         <label><span>Single tradition</span><span>Blended</span></label>
         <input type="range" id="s-blend" min="0" max="100" value="35" />
-        <p class="hint">Whether suggestions stay within the traditions you've picked or reach across them.</p>
+        <p class="hint">This indedx decides whether suggestions stay within the traditions you've picked or reach across them.</p>
       </div>
     </div>
   </section>
@@ -89,7 +88,7 @@
   <!-- Assistant -->
   <section class="panel assistant">
     <div class="panel-head"><h2>Studio Assistant</h2></div>
-    <p class="ethos"><strong>Transparent by design.</strong> Every suggestion shows its reasoning, origin and source. If a request risks stereotyping, I ask instead of guessing — and nothing enters your piece untraceably.</p>
+    <p class="ethos"><strong>Transparent.</strong> Reasonings for each suggestion will be presented.</p>
     <p class="sug-title">Suggested next</p>
     <div id="suggest"></div>
     <div id="feed"></div>
@@ -106,7 +105,7 @@
 </main>
 
 <footer>
-  <strong>Why this matters.</strong> Generative AI can extract cultural expression while erasing its sources — appropriation made invisible. This prototype explores the opposite: an AI collaborator whose transparency (visible reasoning &amp; sources), user control (sliders, consent-based locks) and embedded education are part of the creative process itself, so what you make is something you can trust and own — credits included.
+  <strong>Why this matters.</strong> Generative AI can extract cultural expression while erasing its sources. This prototype, by emphasizing on transparency, user control and embedded education, makes something culturally inspiring that you can trust and own.
 </footer>
 
 <div id="modal" class="modal hidden"></div>
