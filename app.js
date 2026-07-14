@@ -273,27 +273,40 @@ const AE = {
   },
 };
 
-function animateTrack(track, duration){
-
+function animateTrack(track, duration) {
   const head = track.querySelector(".track-playhead");
-  
   track.classList.add("playing");
-  
-  head.animate(
-  [
-  {left:"0%"},
-  {left:"100%"}
-  ],
-  {
-  duration,
-  easing:"linear"
+
+  // Cancel any existing animation so they don't overlap/stack
+  if (track.playheadAnim) {
+    track.playheadAnim.cancel();
   }
+
+  // Use the Web Animations API and store the reference directly on the element
+  track.playheadAnim = head.animate(
+    [
+      { left: "0%" },
+      { left: "100%" }
+    ],
+    {
+      duration,
+      easing: "linear"
+    }
   );
-  
-  setTimeout(()=>{
+
+  // Remove the playing class when the animation finishes naturally
+  track.playheadAnim.onfinish = () => {
+    track.classList.remove("playing");
+  };
+}
+
+// Add this new helper function right below it
+function stopTrackAnimation(track) {
   track.classList.remove("playing");
-  },duration);
-}  
+  if (track.playheadAnim) {
+    track.playheadAnim.cancel();
+  }
+}
 
 /* ---------------- Library grid ---------------- */
 const STATUS_META = {
@@ -393,7 +406,7 @@ function openModal(id) {
   
   AE.preview(el, play);
   
-  animateTrack(row, 5200);
+  /*animateTrack(row, 5200);*/
   
   };
   const add = $("#m-add");
@@ -778,9 +791,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   $("#play").onclick = () => {
     if (!state.selected.length) { renderFlagsMsg(); return; }
+    
+    const playBtn = $("#play");
+    const isPlaying = playBtn.classList.contains("is-playing");
     const rows = document.querySelectorAll(".track");
-    rows.forEach(r=>{animateTrack(r,11000);});
-    AE.playComposition(state.selected.map(byId), $("#play"));
+
+    // Toggle audio (AE.playComposition already handles stopping the audio if it's playing)
+    AE.playComposition(state.selected.map(byId), playBtn);
+
+    if (isPlaying) {
+      // It WAS playing, which means we just stopped it. Cancel animations.
+      rows.forEach(r => stopTrackAnimation(r));
+    } else {
+      // It WAS NOT playing, which means we just started it. Trigger animations.
+      rows.forEach(r => animateTrack(r, 11000));
+    }
   };
   $("#clear").onclick = () => { state.selected = []; AE.stop(); renderGrid(); renderComp(); renderFlags(); renderSuggestions(); };
   $("#export").onclick = exportNotes;
