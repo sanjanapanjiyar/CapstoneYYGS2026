@@ -135,6 +135,141 @@ const AE = {
     btn.classList.add("is-playing");
     this.endTimer = setTimeout(() => btn.classList.remove("is-playing"), (bars * 8 * eighth + 1.5) * 1000);
   },
+    // Offline render – returns a Promise that resolves with an AudioBuffer
+  renderOffline(elements, bars = 4, eighth = 0.3) {
+    // Calculate total duration (matching playComposition)
+    let maxDur = 0;
+    let melodics = 0;
+    elements.forEach(el => {
+      if (!el.sound) return;
+      const isMelodic = el.sound.kind !== "rhythm";
+      const offset = isMelodic ? melodics++ * 4 * eighth : 0;
+      const dur = this.durationOf(el, bars, eighth) + offset;
+      if (dur > maxDur) maxDur = dur;
+    });
+    const totalDur = maxDur + 0.2; // extra tail
+
+    const sampleRate = 44100;
+    const ctx = new OfflineAudioContext(2, sampleRate * totalDur, sampleRate);
+
+    // Copy gain and compressor setup (like in init)
+    const comp = ctx.createDynamicsCompressor();
+    const out = ctx.createGain();
+    out.gain.value = 0.55;
+    out.connect(comp);
+    comp.connect(ctx.destination);
+
+    // Schedule each element (reuse schedule logic)
+    let melodicsIdx = 0;
+    const t0 = 0; // start at 0 for offline
+    elements.forEach(el => {
+      if (!el.sound) return;
+      const isMelodic = el.sound.kind !== "rhythm";
+      const root = isMelodic ? (el.sound.root >= 400 ? 440 : 220) : null;
+      const offset = isMelodic ? melodicsIdx++ * 4 * eighth : 0;
+      // We need to re-implement schedule using this offline context
+      const s = el.sound;
+      if (!s) return;
+      // Duplicate the scheduling logic but using ctx and out
+      const scheduleOffline = (el, t0, bars, eighth, root) => {
+        // This is essentially the same as AE.schedule but uses ctx and out
+        const s = el.sound;
+        if (!s) return;
+        const pluckOff = (freq, t, dur = 0.5, vol = 0.35, type = "triangle") => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = type;
+          o.frequency.value = freq;
+          g.gain.setValueAtTime(vol, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+          o.connect(g);
+          g.connect(out);
+          o.start(t);
+          o.stop(t + dur);
+        };
+        const noiseOff = (t, { dur = 0.08, vol = 0.4, freq = 2000, q = 1 } = {}) => {
+          // Need noise buffer – we can generate one in this context
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const s = ctx.createBufferSource();
+          s.buffer = buf;
+          const f = ctx.createBiquadFilter();
+          f.type = "bandpass";
+          f.frequency.value = freq;
+          f.Q.value = q;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(vol, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+          s.connect(f);
+          f.connect(g);
+          g.connect(out);
+          s.start(t);
+          s.stop(t + dur);
+        };
+        const drumOff = (t, { freq = 100, decay = 0.25, vol = 0.8 } = {}) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.setValueAtTime(freq * 2.2, t);
+          o.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+          g.gain.setValueAtTime(vol, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+          o.connect(g);
+          g.connect(out);
+          o.start(t);
+          o.stop(t + decay);
+          noiseOff(t, { dur: 0.02, vol: vol * 0.3, freq: 3500 });
+        };
+        const hitOff = (name, t) => {
+          ({
+            hi:   () => { pluckOff(950, t, 0.09, 0.35, "square"); noiseOff(t, { dur: 0.05, vol: 0.25, freq: 2400, q: 4 }); },
+            bass: () => drumOff(t, { freq: 75, decay: 0.3, vol: 0.9 }),
+            tone: () => drumOff(t, { freq: 185, decay: 0.14, vol: 0.55 }),
+            slap: () => noiseOff(t, { dur: 0.09, vol: 0.5, freq: 2600, q: 1.5 }),
+            don:  () => drumOff(t, { freq: 58, decay: 0.42, vol: 1.05 }),
+            ka:   () => noiseOff(t, { dur: 0.05, vol: 0.3, freq: 4200, q: 3 }),
+            acc:  () => noiseOff(t, { dur: 0.1, vol: 0.5, freq: 1500, q: 0.8 }),
+            tick: () => noiseOff(t, { dur: 0.05, vol: 0.18, freq: 1800, q: 0.8 }),
+          })[name]();
+        };
+        const freqOff = (el, idx, rootOverride) => {
+          const s = el.sound;
+          const root = rootOverride || s.root;
+          return s.cents ? root * Math.pow(2, s.cents[idx] / 1200) : root * Math.pow(2, s.notes[idx] / 12);
+        };
+
+        if (s.kind === "rhythm") {
+          const slots = s.twelve ? 12 : s.bars2 ? 16 : 8;
+          const cycle = slots * eighth;
+          const reps = Math.max(1, Math.round((bars * 8 * eighth) / cycle));
+          for (let r = 0; r < reps; r++)
+            s.pattern.forEach((p) => hitOff(p.s, t0 + r * cycle + p.i * eighth));
+        } else if (s.kind === "arp") {
+          const reps = bars;
+          for (let r = 0; r < reps; r++)
+            s.notes.forEach((n, i) => pluckOff((rootOverride || s.root) * Math.pow(2, n / 12), t0 + r * 8 * eighth + i * eighth, 0.6, 0.28));
+        } else if (s.kind === "pipes") {
+          const step = eighth * 2;
+          s.notes.forEach((_, i) => {
+            const f = freqOff(el, i, rootOverride);
+            const t = t0 + i * step;
+            pluckOff(f, t, step * 1.6, 0.3, "sine");
+            noiseOff(t, { dur: step, vol: 0.06, freq: f * 2, q: 6 });
+          });
+        } else if (s.kind === "scale") {
+          const count = (s.cents || s.notes).length;
+          const step = eighth * 2;
+          for (let i = 0; i < count; i++)
+            pluckOff(freqOff(el, i, rootOverride), t0 + i * step, 0.8, 0.3);
+        }
+      };
+
+      scheduleOffline(el, t0 + offset, bars, eighth, root);
+    });
+
+    return ctx.startRendering();
+  },
 };
 
 /* ---------------- Library grid ---------------- */
@@ -429,6 +564,98 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   $("#clear").onclick = () => { state.selected = []; AE.stop(); renderGrid(); renderComp(); renderFlags(); renderSuggestions(); };
   $("#export").onclick = exportNotes;
+    // Download MP3
+  $("#download-mp3").onclick = async function() {
+    const els = state.selected.map(byId);
+    if (!els.length) {
+      renderFlagsMsg(); // reuses the existing warning
+      return;
+    }
+    // Disable button during processing
+    this.disabled = true;
+    this.textContent = "Rendering…";
+    try {
+      // Render offline
+      const buffer = await AE.renderOffline(els, 4, 0.3);
+      // Encode to MP3 using lamejs
+      const mp3Data = encodeAudioBufferToMP3(buffer);
+      // Create blob and download
+      const blob = new Blob([mp3Data], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const title = $("#title").value.trim() || "Untitled";
+      a.download = `${title.replace(/[^\w\- ]+/g, "").trim().replace(/ +/g, "-") || "composition"}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      // Show success flag
+      const box = $("#flags");
+      box.innerHTML = `<div class="flag f-good">${icon("check")}<p>MP3 downloaded successfully.</p></div>`;
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Could not render MP3. See console for details.");
+    } finally {
+      this.disabled = false;
+      this.innerHTML = `<svg class="ic"><use href="#i-download"/></svg> Download MP3`;
+    }
+  };
+
+  // Helper: encode AudioBuffer to MP3 using lamejs
+  function encodeAudioBufferToMP3(buffer) {
+    const sampleRate = buffer.sampleRate;
+    const channels = buffer.numberOfChannels;
+    const samples = buffer.length;
+    // Get interleaved PCM data (float32, -1..1)
+    const pcm = new Float32Array(samples * channels);
+    for (let ch = 0; ch < channels; ch++) {
+      const channelData = buffer.getChannelData(ch);
+      for (let i = 0; i < samples; i++) {
+        pcm[i * channels + ch] = channelData[i];
+      }
+    }
+    // Convert to 16-bit int (lamejs expects Int16Array)
+    const pcmInt16 = new Int16Array(pcm.length);
+    for (let i = 0; i < pcm.length; i++) {
+      const s = Math.max(-1, Math.min(1, pcm[i]));
+      pcmInt16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    // Encode with lamejs
+    const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128); // 128 kbps
+    const mp3Data = [];
+    const blockSize = 1152; // samples per channel per frame
+    for (let i = 0; i < pcmInt16.length; i += blockSize * channels) {
+      const chunk = pcmInt16.subarray(i, i + blockSize * channels);
+      let mp3buf;
+      if (chunk.length >= blockSize * channels) {
+        // Split into left/right if stereo
+        if (channels === 2) {
+          const left = new Int16Array(blockSize);
+          const right = new Int16Array(blockSize);
+          for (let j = 0; j < blockSize; j++) {
+            left[j] = chunk[j * 2];
+            right[j] = chunk[j * 2 + 1];
+          }
+          mp3buf = mp3encoder.encodeBuffer(left, right);
+        } else {
+          mp3buf = mp3encoder.encodeBuffer(chunk);
+        }
+        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+      }
+    }
+    const finalBuf = mp3encoder.flush();
+    if (finalBuf.length > 0) mp3Data.push(finalBuf);
+    // Combine into one Uint8Array
+    const totalLen = mp3Data.reduce((acc, buf) => acc + buf.length, 0);
+    const result = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const buf of mp3Data) {
+      result.set(buf, offset);
+      offset += buf.length;
+    }
+    return result;
+  }
 
   $("#promptForm").addEventListener("submit", (e) => {
     e.preventDefault();
