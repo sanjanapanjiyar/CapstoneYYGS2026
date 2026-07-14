@@ -2,7 +2,7 @@
 
 const state = {
   selected: [],                       // element ids in the composition
-  unlocked: new Set(),
+  unlocked: new Set(JSON.parse(localStorage.getItem("css-unlocked") || "[]")),
   filter: "All",
   fidelity: 0.35,                     // 0 reproduce ↔ 1 reinterpret
   blend: 0.35,                        // 0 single tradition ↔ 1 blended
@@ -328,6 +328,7 @@ function openModal(id) {
         unlockBtn.innerHTML = `${icon("unlock")} I've read this — unlock`;
         unlockBtn.onclick = () => {
           state.unlocked.add(id);
+          localStorage.setItem("css-unlocked", JSON.stringify([...state.unlocked]));
           renderGrid(); renderSuggestions(); openModal(id);
         };
       } else {
