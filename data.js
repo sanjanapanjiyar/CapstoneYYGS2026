@@ -71,7 +71,7 @@ const ELEMENTS = [
   },
   {
     id: "flute", name: "Flute (dizi)", type: "Instrument",
-    tradition: "Chinese", region: "China",
+    tradition: "Han Chinese", region: "China",
     meaning: "The flute (dizi) is a beloved symbol of Chinese folk culture, with its bamboo construction representing modesty and tenacity. Its bright, buzzing timbre evokes pastoral landscapes and plays a vital role in opera, poetry, and folk ensembles.",
     status: "open", context: null,
     source: "A. Thrasher, Chinese Musical Instruments (2000)",
