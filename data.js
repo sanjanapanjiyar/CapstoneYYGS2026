@@ -70,6 +70,15 @@ const ELEMENTS = [
     sound: { kind: "pipes", root: 440, notes: [12, 9, 7, 4, 0, 4, 7] }
   },
   {
+    id: "flute", name: "Flute (dizi)", type: "Instrument",
+    tradition: "Chinese", region: "China",
+    meaning: "The flute (dizi) is a beloved symbol of Chinese folk culture, with its bamboo construction representing modesty and tenacity. Its bright, buzzing timbre evokes pastoral landscapes and plays a vital role in opera, poetry, and folk ensembles.",
+    status: "open", context: null,
+    source: "A. Thrasher, Chinese Musical Instruments (2000)",
+    tags: ["bamboo", "folk", "opera", "pastoral"], flex: 0.4,
+    sound: { kind: "pipes", root: 440, notes: [0, 2, 4, 7, 9, 12] }
+  },
+  {
     id: "kora", name: "Kora Kumbengo", type: "Instrument",
     tradition: "Mandé (Jali)", region: "Mali, Senegal, The Gambia",
     meaning: "A rippling ostinato on the 21-string harp-lute of the jali (griots) — hereditary musician-historians who keep centuries of genealogy and history alive in song.",
