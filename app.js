@@ -2,7 +2,7 @@
 
 const state = {
   selected: [],                       // element ids in the composition
-  unlocked: new Set(JSON.parse(localStorage.getItem("css-unlocked") || "[]")),
+  unlocked: new Set(),
   filter: "All",
   fidelity: 0.35,                     // 0 reproduce ↔ 1 reinterpret
   blend: 0.35,                        // 0 single tradition ↔ 1 blended
@@ -308,11 +308,34 @@ function openModal(id) {
   const canUse = st === "open" || st === "unlocked";
   const inComp = state.selected.includes(id);
   let statusBlock = "";
-  if (st === "learn-first")
-    statusBlock = `<div class="learn-box">
-      <h4>${icon("book")} Learn before you use this</h4><p>${el.context}</p>
-      <button class="btn btn-gold" id="m-unlock">${icon("unlock")} I've read this — unlock</button>
-    </div>`;
+  if (st === "learn-first") {
+  // Countdown logic – 20 seconds
+  let secondsLeft = 20;
+  statusBlock = `<div class="learn-box">
+    <h4>${icon("book")} Learn before you use this</h4><p>${el.context}</p>
+    <button class="btn btn-gold" id="m-unlock" disabled>${icon("unlock")} Wait ${secondsLeft}s</button>
+  </div>`;
+  // We'll update the button after the modal is inserted
+  // Use a small delay to ensure the DOM is ready
+  setTimeout(() => {
+    const unlockBtn = document.getElementById("m-unlock");
+    if (!unlockBtn) return;
+    const timer = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(timer);
+        unlockBtn.disabled = false;
+        unlockBtn.innerHTML = `${icon("unlock")} I've read this — unlock`;
+        unlockBtn.onclick = () => {
+          state.unlocked.add(id);
+          renderGrid(); renderSuggestions(); openModal(id);
+        };
+      } else {
+        unlockBtn.innerHTML = `${icon("unlock")} Wait ${secondsLeft}s`;
+      }
+    }, 1000);
+  }, 50);
+}
   else if (st === "restricted")
     statusBlock = `<div class="restrict-box">
       <h4>${icon("ban")} Why this stays view-only</h4><p>${el.context}</p>
