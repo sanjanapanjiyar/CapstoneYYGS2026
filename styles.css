@@ -160,7 +160,18 @@ button { font-family: inherit; cursor: pointer; }
 .f-good { background: var(--sage-soft); color: #bcdcc6; border: 1px solid rgba(143, 191, 159, 0.3); }
 
 /* ---------- assistant ---------- */
-.assistant { display: flex; flex-direction: column; max-height: calc(100vh - 130px); position: sticky; top: 92px; }
+.assistant {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 130px);
+  position: sticky;
+  top: 92px;
+  overflow-y: auto;         /* enables scroll inside the panel */
+  background: var(--panel); /* ensures background covers entire area */
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+}
 .ethos {
   font-size: 12px; color: var(--mut); background: var(--panel-2);
   border: 1px dashed var(--line); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px;
