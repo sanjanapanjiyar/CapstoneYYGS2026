@@ -5,7 +5,7 @@ const state = {
   unlocked: new Set(JSON.parse(localStorage.getItem("css-unlocked") || "[]")),
   filter: "All",
   fidelity: 0.35,                     // 0 reproduce ↔ 1 reinterpret
-  blend: 0.35,                        // 0 single tradition ↔ 1 blended
+  blend: 0.35,                        // 0 single tradition ↔ 1 blended 
   promptTags: [],
 };
 const byId = (id) => ELEMENTS.find((e) => e.id === id);
