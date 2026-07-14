@@ -1,18 +1,18 @@
 /* Cultural Sound Studio — warm dark studio aesthetic */
 :root {
-  --bg: #14110d;
-  --panel: #1d1915;
-  --panel-2: #241f19;
-  --line: #322b23;
-  --text: #ede5d8;
-  --mut: #9b9081;
-  --gold: #e0a458;
-  --gold-soft: rgba(224, 164, 88, 0.14);
-  --sage: #8fbf9f;
-  --sage-soft: rgba(143, 191, 159, 0.12);
-  --terra: #d9704e;
-  --terra-soft: rgba(217, 112, 78, 0.12);
-  --violet: #b39ddb;
+  --bg: #0f0f0f;
+  --panel: #1a1a1a;
+  --panel-2: #242424;
+  --line: #3a3a3a;
+  --text: #f5f5f5;
+  --mut: #a8a8a8;
+  --gold: #ffffff;
+  --gold-soft: rgba(255, 255, 255, 0.08);
+  --sage: #b0b0b0;
+  --sage-soft: rgba(176, 176, 176, 0.08);
+  --terra: #8a8a8a;
+  --terra-soft: rgba(138, 138, 138, 0.08);
+  --violet: #9a9a9a;
   --radius: 14px;
   --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
   --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
