@@ -172,7 +172,6 @@ const AE = {
       if (!s) return;
       // Duplicate the scheduling logic but using ctx and out
       const scheduleOffline = (el, t0, bars, eighth, root) => {
-        // This is essentially the same as AE.schedule but uses ctx and out
         const s = el.sound;
         if (!s) return;
         const pluckOff = (freq, t, dur = 0.5, vol = 0.35, type = "triangle") => {
@@ -238,30 +237,32 @@ const AE = {
           const root = rootOverride || s.root;
           return s.cents ? root * Math.pow(2, s.cents[idx] / 1200) : root * Math.pow(2, s.notes[idx] / 12);
         };
-
         if (s.kind === "rhythm") {
           const slots = s.twelve ? 12 : s.bars2 ? 16 : 8;
           const cycle = slots * eighth;
           const reps = Math.max(1, Math.round((bars * 8 * eighth) / cycle));
           for (let r = 0; r < reps; r++)
             s.pattern.forEach((p) => hitOff(p.s, t0 + r * cycle + p.i * eighth));
-        } else if (s.kind === "arp") {
+        } 
+        else if (s.kind === "arp") {
           const reps = bars;
           for (let r = 0; r < reps; r++)
-            s.notes.forEach((n, i) => pluckOff((rootOverride || s.root) * Math.pow(2, n / 12), t0 + r * 8 * eighth + i * eighth, 0.6, 0.28));
-        } else if (s.kind === "pipes") {
+            s.notes.forEach((n, i) => pluckOff((root || s.root) * Math.pow(2, n / 12), t0 + r * 8 * eighth + i * eighth, 0.6, 0.28));
+        } 
+        else if (s.kind === "pipes") {
           const step = eighth * 2;
           s.notes.forEach((_, i) => {
-            const f = freqOff(el, i, rootOverride);
+            const f = freqOff(el, i, root);
             const t = t0 + i * step;
             pluckOff(f, t, step * 1.6, 0.3, "sine");
             noiseOff(t, { dur: step, vol: 0.06, freq: f * 2, q: 6 });
           });
-        } else if (s.kind === "scale") {
+        } 
+        else if (s.kind === "scale") {
           const count = (s.cents || s.notes).length;
           const step = eighth * 2;
           for (let i = 0; i < count; i++)
-            pluckOff(freqOff(el, i, rootOverride), t0 + i * step, 0.8, 0.3);
+            pluckOff(freqOff(el, i, root), t0 + i * step, 0.8, 0.3);
         }
       };
 
@@ -271,6 +272,28 @@ const AE = {
     return ctx.startRendering();
   },
 };
+
+function animateTrack(track, duration){
+
+  const head = track.querySelector(".track-playhead");
+  
+  track.classList.add("playing");
+  
+  head.animate(
+  [
+  {left:"0%"},
+  {left:"100%"}
+  ],
+  {
+  duration,
+  easing:"linear"
+  }
+  );
+  
+  setTimeout(()=>{
+  track.classList.remove("playing");
+  },duration);
+}  
 
 /* ---------------- Library grid ---------------- */
 const STATUS_META = {
@@ -366,14 +389,20 @@ function openModal(id) {
   wrap.onclick = (e) => { if (e.target === wrap) closeModal(); };
   $("#m-close").onclick = closeModal;
   const play = $("#m-play");
-  if (play) play.onclick = () => AE.preview(el, play);
+  if (play) play.onclick = () => {
+  
+  AE.preview(el, play);
+  
+  animateTrack(row, 5200);
+  
+  };
   const add = $("#m-add");
   if (add) add.onclick = () => { toggleElement(id); closeModal(); };
   const unlock = $("#m-unlock");
   if (unlock) unlock.onclick = () => {
     state.unlocked.add(id);
     localStorage.setItem("css-unlocked", JSON.stringify([...state.unlocked]));
-    renderGrid(); renderSuggestions(); openModal(id);
+    renderGrid(); renderSuggestions(); renderProducer(); openModal(id);
   };
 }
 function closeModal() { AE.stop(); $("#modal").classList.add("hidden"); }
@@ -383,7 +412,7 @@ function toggleElement(id) {
   const i = state.selected.indexOf(id);
   if (i >= 0) state.selected.splice(i, 1);
   else state.selected.push(id);
-  renderGrid(); renderComp(); renderFlags(); renderSuggestions();
+  renderGrid(); renderComp(); renderFlags(); renderSuggestions(); renderProducer(); 
 }
 function renderComp() {
   const box = $("#comp");
@@ -392,15 +421,86 @@ function renderComp() {
     return;
   }
   box.innerHTML = "";
-  state.selected.forEach((id) => {
-    const el = byId(id);
-    const chip = document.createElement("div");
-    chip.className = "comp-chip";
-    chip.innerHTML = `<div><strong>${el.name}</strong><span>${el.tradition}</span></div>
-      <button aria-label="Remove ${el.name}">✕</button>`;
-    chip.querySelector("button").onclick = () => toggleElement(id);
-    box.appendChild(chip);
-  });
+  const icons = {
+    Rhythm: "🥁",
+    Scale: "🎼",
+    Instrument: "🎵",
+    Song: "🎤"
+    };
+  state.selected.forEach(id => {
+
+      const el = byId(id);
+      
+      const row = document.createElement("div");
+      row.className = "track";
+      
+      row.innerHTML = `
+      
+      <div class="track-top">
+      
+      <div class="track-title">
+      
+      <div class="track-icon">
+      ${icons[el.type] || "🎶"}
+      </div>
+      
+      <div class="track-info">
+      <strong>${el.name}</strong>
+      <span>${el.tradition} • ${el.region}</span>
+      </div>
+      
+      </div>
+      
+      <div class="track-type">
+      ${el.type}
+      </div>
+      
+      </div>
+      
+      <div class="track-controls">
+      
+      ${
+      el.sound
+      ? `<button class="btn btn-sm track-play">▶</button>`
+      : `<button class="btn btn-sm track-play" disabled>—</button>`
+      }
+      
+      <input
+      type="range"
+      min="0"
+      max="100"
+      value="80"
+      >
+      
+      <button class="track-remove">✕</button>
+      
+      </div>
+      
+      <div class="track-timeline">
+      
+      <div class="track-wave"></div>
+      
+      <div class="track-playhead"></div>
+      
+      </div>
+      
+      `;
+      
+      const remove = row.querySelector(".track-remove");
+      
+      remove.onclick = () => toggleElement(id);
+      
+      const play = row.querySelector(".track-play");
+      
+      if(el.sound){
+      
+      play.onclick = () => AE.preview(el, play);
+      
+      }
+      
+      box.appendChild(row);
+      
+    });
 }
 
 /* ---------------- Ethics flags ---------------- */
@@ -473,6 +573,100 @@ function renderSuggestions() {
   });
 }
 
+function renderProducer(){
+
+  const box = $("#producerNotes");
+  
+  if(!box) return;
+  
+  const els = state.selected.map(byId);
+  
+  const notes = [];
+  
+  const rhythms = els.filter(e=>e.type==="Rhythm").length;
+  const melody = els.filter(e=>e.type==="Instrument").length;
+  const scales = els.filter(e=>e.type==="Scale").length;
+  
+  if(rhythms && !melody){
+  
+  notes.push({
+  type:"warn",
+  title:"Texture",
+  body:"Your composition is rhythm-heavy. Adding an instrument could create a stronger melodic focus."
+  });
+  
+  }
+  
+  if(melody && !scales){
+  
+  notes.push({
+  type:"warn",
+  title:"Harmony",
+  body:"You have melodic material but no modal framework. Adding a scale will give the melody more context."
+  });
+  
+  }
+  
+  const traditions = [...new Set(els.map(e=>e.tradition))];
+  
+  if(traditions.length>=2){
+  
+  if(state.blend<0.5){
+  
+  notes.push({
+  type:"warn",
+  title:"Fusion",
+  body:`You're combining ${traditions.join(", ")} while your Blend slider favors a single tradition. Consider increasing Blend or narrowing your palette.`
+  });
+  
+  }else{
+  
+  notes.push({
+  type:"good",
+  title:"Fusion",
+  body:`Your Blend setting matches your cross-cultural composition. The liner notes will preserve attribution for every tradition used.`
+  });
+  
+  }
+  
+  }
+  
+  const unlocked = els.filter(e=>statusOf(e)==="unlocked");
+  
+  if(unlocked.length){
+  
+  notes.push({
+  type:"good",
+  title:"Learning",
+  body:`You've unlocked ${unlocked.length} cultural element(s). Their learning context will be included in the exported credits.`
+  });
+  
+  }
+  
+  if(!notes.length){
+  
+  notes.push({
+  type:"good",
+  title:"Ready",
+  body:"Your composition is balanced so far. Keep experimenting, and I'll let you know if I notice anything worth improving."
+  });
+  
+  }
+  
+  box.innerHTML = notes.map(n=>`
+  
+  <div class="producer-card ${n.type}">
+  
+  <h4>${n.title}</h4>
+  
+  <p>${n.body}</p>
+  
+  </div>
+  
+  `).join("");
+  
+  }
+
 /* ---------------- Prompt box ---------------- */
 function addMsg(kind, html) {
   const feed = $("#feed");
@@ -500,7 +694,7 @@ function handlePrompt(text) {
     return `<li><strong>${el.name}</strong> (${el.tradition}) — ${el.meaning.split(". ")[0].replace(/\.$/, "")}. <span class="src">Source: ${el.source}.</span>${locked ? ` <span class="locknote">${icon("book")} Learn-first. Please open it to read its context and unlock.</span>` : ""}</li>`;
   }).join("");
   addMsg("ai", `<p>For something <strong>${tags.join(", ")}</strong>, here's what fits and why:</p><ul>${items}</ul><p class="mut">These are also ranked in “Suggested next”.</p>`);
-  renderSuggestions();
+  renderSuggestions(); renderProducer();
   matches.forEach(({ el }) => {
     const card = document.querySelector(`.card[data-id="${el.id}"]`);
     if (card) { card.classList.add("flash"); setTimeout(() => card.classList.remove("flash"), 2600); }
@@ -565,7 +759,7 @@ function renderFlagsMsg() {
 
 /* ---------------- Wiring ---------------- */
 document.addEventListener("DOMContentLoaded", () => {
-  renderGrid(); renderComp(); renderSuggestions();
+  renderGrid(); renderComp(); renderSuggestions(); renderFlags(); renderProducer();
 
   document.querySelectorAll(".filters button").forEach((b) => {
     b.onclick = () => {
@@ -577,13 +771,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const bindSlider = (id, key) => {
     const s = $(id);
-    s.addEventListener("input", () => { state[key] = +s.value / 100; renderFlags(); renderSuggestions(); });
+    s.addEventListener("input", () => { state[key] = +s.value / 100; renderFlags(); renderSuggestions(); renderProducer();});
   };
   bindSlider("#s-fidelity", "fidelity");
   bindSlider("#s-blend", "blend");
 
   $("#play").onclick = () => {
     if (!state.selected.length) { renderFlagsMsg(); return; }
+    const rows = document.querySelectorAll(".track");
+    rows.forEach(r=>{animateTrack(r,11000);});
     AE.playComposition(state.selected.map(byId), $("#play"));
   };
   $("#clear").onclick = () => { state.selected = []; AE.stop(); renderGrid(); renderComp(); renderFlags(); renderSuggestions(); };
